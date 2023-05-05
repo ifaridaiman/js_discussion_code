@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>Search Widget -- Locator</title>
+
+  <style>
+    html,
+    body,
+    #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+    }
+  </style>
+
+  <link rel="stylesheet" href="https://js.arcgis.com/4.16/esri/css/main.css">
+  <script src="https://js.arcgis.com/4.16/"></script>
+
+  <script>
+    //Load Search, Locator, FeatureLayer, and SimpleFillSymbol into the web app.
+    require([
+      "esri/Map",
+      "esri/views/MapView",
+      "esri/widgets/Search",
+      "esri/tasks/Locator",
+      "esri/layers/FeatureLayer"
+    ], function(
+      Map,
+      MapView,
+      Search,
+      Locator,
+      FeatureLayer) {
+
+      //Create the Map
+      var map = new Map({
+        basemap: "streets"
+      });
+
+      //Create the MapView
+      var view = new MapView({
+        container: "viewDiv",
+        map: map,
+        center: [-111.8910, 40.7608], // lon, lat
+        scale: 10000000
+      });
+
+      const featureLayerOil = new FeatureLayer({
+        url: "https://services.arcgis.com/V6ZHFr6zdgNZuVG0/ArcGIS/rest/services/Alternative_Fuel_Stations/FeatureServer/0",
+        popupTemplate:{
+          title: "Alternate Fuel Stations: {Station_Name}",
+          overwriteActions: true,
+        }
+      });
+
+      //Create the Search
+      var searchWidget = new Search({
+        view: view,
+        allPlaceholder: "Location",
+        suggestionsEnabled: true,
+        //Sources for the Search
+        sources: [{
+            //Locator
+            locator: new Locator({ url: "//geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer" }),
+            singleLineFieldName: "SingleLine",
+            outFields: ["Addr_type"],
+            //Source name that appears in the Search widget for the locator
+            name: "World Geocode",
+            localSearchOptions: {
+              minScale: 300000,
+              distance: 50000
+            },
+          },{
+            //FeatureLayer
+            featureLayer: featureLayerOil ,
+            searchFields: ["Station_Name"],
+            suggestionTemplate: "{Station_Name}",
+            exactMatch: false, 
+            outFields: ["*"],
+            //Source name that appears in the Search widget for the Feature Layer
+            name: "Alternative Fuel Stations",
+            zoomScale: 500000,
+            //Symbolizing the result.
+            resultSymbol:{
+              type: "simple-marker",
+              color: [51,51, 204, 0.9],
+              style: "solid",
+              outline:{
+                color: "white",
+                width: 1
+              }
+            }, 
+          }]
+      });
+
+      // Add the search widget to the top right corner of the view
+      view.ui.add(searchWidget, {
+        position: "top-right"
+      });
+
+      //Enable docking of the pop-up window.
+      view.popup.dockEnabled = true;
+      view.popup.dockOptions = {
+          buttonEnabled: true,
+          position: "bottom-left", 
+      };
+
+      //Create action object that defines the action.
+      var viewRotateAction = {
+          title: "Rotate",
+          id: "rotate",
+          className: "esri-icon-rotate"
+      };
+
+      //Add the action to the pop-up window's actions.
+      view.popup.actions.push(viewRotateAction);
+
+      //Add the function defining the operation.
+      function rotateView(){
+          view.goTo({
+            rotation: 45
+          })
+      }
+
+      //Implement the event for the action.
+      view.popup.on("trigger-action", function(event){
+          if(event.action.id === "rotate"){
+              rotateView();
+          }
+      });
+    });
+  </script>
+</head>
+
+<body>
+  <div id="viewDiv"></div>
+</body>
+</html>

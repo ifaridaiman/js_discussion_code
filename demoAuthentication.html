@@ -1,0 +1,122 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>Accessing a service using OAuth</title>
+  <link rel="stylesheet" href="https://js.arcgis.com/4.3/esri/css/main.css">
+  <script src="https://js.arcgis.com/4.3/"></script>
+  <style>
+    html,
+    body, #viewDiv{
+      width: 100%;
+      height: 100%;
+      margin: 0px;
+      padding: 0px;
+    }
+
+    .action {
+      color: blue;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+  </style>
+  <script>
+    require([
+      "esri/portal/Portal",
+      "esri/identity/OAuthInfo",
+      "esri/identity/IdentityManager",
+      "esri/Map",
+      "esri/views/MapView",
+      "esri/layers/MapImageLayer",
+
+      "dojo/dom-style",
+      "dojo/dom-attr",
+      "dojo/on",
+      "dojo/dom",
+      "dojo/domReady!"
+    ], function(
+        Portal, OAuthInfo, esriId, Map, MapView, MapImageLayer,
+        domStyle, domAttr, on, dom) {
+
+      // The OAuthInfo object holds the appId information to register with the IdentityManager
+      var info = new OAuthInfo({
+        appId: "HYTAwDAVbbaxskVX",
+        popup: false 
+      });
+      esriId.registerOAuthInfos([info]);
+
+      // The checkSignInStatus function checks to see if the user is signed in.
+      esriId.checkSignInStatus(info.portalUrl + "/sharing").then(
+        function() {
+            // If checked in the displayMap function is called.
+          displayMap();
+        }
+      ).otherwise(
+        function() {
+            // If not checked in, change the display.
+          domStyle.set("anonymousPanel", "display", "block");
+          domStyle.set("personalizedPanel", "display", "none");
+        }
+      );
+
+      // When the sign-in link is clicked, obtain the credentials from the identity manager including the appid.
+      on(dom.byId("sign-in"), "click", function() {
+        esriId.getCredential(info.portalUrl + "/sharing");
+      });
+
+      // When the sign-out link is clicked, destroy the credentials in the identity manager and reload the application window.
+      on(dom.byId("sign-out"), "click", function() {
+        esriId.destroyCredentials();
+        window.location.reload();
+      });
+
+      // The displayMap function to display the map if the user was signed in succesfully.
+      function displayMap() {
+        var portal = new Portal();
+
+        // Once loaded, user is signed in
+        portal.load().then(function() {
+          domStyle.set("personalizedPanel", "display", "block");
+          domStyle.set("viewDiv", "display", "block");
+
+          // Create a new Map class with a topo basemap.
+          var map = new Map({
+            basemap: "topo"
+          });
+
+          // Create a new MapView class to display the map.
+          var view = new MapView({
+            container: "viewDiv",
+            map: map,
+            zoom: 14,
+            center: [-118.24,34.05]
+          });
+
+          // a token is appended automatically when making requests to this premium layer
+          var traffic = new MapImageLayer({
+            url: 'https://traffic.arcgis.com/arcgis/rest/services/World/Traffic/MapServer'
+          })
+          // adds the layer to the map
+          map.add(traffic);
+
+
+          // sets the userID elements innerHTML attribute to the portals username.
+          domAttr.set("userId", "innerHTML", portal.user.username);
+        });
+      }
+    });
+  </script>
+</head>
+
+<body>
+  <div id="anonymousPanel" style="display: none; padding: 5px; text-align: center;">
+    <span id="sign-in" class="action">Sign In</span> to see live traffic.
+  </div>
+
+  <div id="personalizedPanel" style="display: none; padding: 5px; text-align: center;">
+    Welcome <span id="userId" style="font-weight: bold;"></span> &nbsp;-&nbsp;
+    <span id="sign-out" class="action">Sign Out</span>
+  </div>
+
+  <div id="viewDiv" style="display: none;"></div>
+</body>
+</html>
